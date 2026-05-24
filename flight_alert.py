@@ -484,10 +484,9 @@ def run_searches():
 
         send_daily_summary(all_results)
         if os.getenv("GITHUB_ACTIONS") != "true":
-    auto_push_to_github()
-else:
-    print("Running in GitHub Actions. Skipping internal auto-push.")
-
+        auto_push_to_github()
+        else:
+           print("Running in GitHub Actions. Skipping internal auto-push.")
 def auto_push_to_github():
     try:
         subprocess.run(["git", "pull", "origin", "main", "--no-rebase"], check=True)
