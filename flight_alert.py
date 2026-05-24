@@ -483,7 +483,10 @@ def run_searches():
         print(f"Saved {len(all_results)} results to {CSV_FILE}.")
 
         send_daily_summary(all_results)
-        auto_push_to_github()
+        if os.getenv("GITHUB_ACTIONS") != "true":
+    auto_push_to_github()
+else:
+    print("Running in GitHub Actions. Skipping internal auto-push.")
 
 def auto_push_to_github():
     try:
