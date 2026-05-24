@@ -16,7 +16,7 @@ from playwright.sync_api import sync_playwright
 # SETTINGS
 # =========================
 
-ORIGINS = ["MEX"]
+ORIGINS = ["MEX", "GDL", "MTY"]
 DESTINATIONS = ["NRT", "CDG","MAD", "EDI", "AMS", "FCO", "DUB"]
 
 SCAN_START_DATE = "2026-09-01"
