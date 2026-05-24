@@ -389,7 +389,10 @@ def send_daily_summary(results):
     best_business = min(business_results, key=lambda r: r["lowest_price"]) if business_results else None
     best_buy_now = min(buy_now_results, key=lambda r: r["lowest_price"]) if buy_now_results else None
 
-    message = "📊 DAILY FLIGHT DEAL SUMMARY\n\n"
+    message = (
+    "📊 DAILY FLIGHT DEAL SUMMARY\n"
+    f"⏰ Scan Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+    )
 
     if best_economy:
         message += (
