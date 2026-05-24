@@ -1,4 +1,3 @@
-streamlit
-pandas
-altair
-plotly
+playwright
+requests
+python-dotenv
