@@ -465,23 +465,23 @@ def run_searches():
                         )
 
                         if result:
-                           cabin_results.append(result)
-                           all_results.append(result)
+                            cabin_results.append(result)
+                            all_results.append(result)
 
-                if cabin_results:
-                    top_3_deals = sorted(
-                        cabin_results,
-                        key=lambda item: item["lowest_price"]
-                    )[:3]
+                    if cabin_results:
+                        top_3_deals = sorted(
+                            cabin_results,
+                            key=lambda item: item["lowest_price"]
+                        )[:3]
 
-                    send_top_3_deals_alert(
-                        destination,
-                        cabin_class,
-                        top_3_deals,
-                        history
-                    )
-                else:
-                    print(f"No valid prices found for {destination} / {cabin_class}.")
+                        send_top_3_deals_alert(
+                            destination,
+                            cabin_class,
+                            top_3_deals,
+                            history
+                        )
+                    else:
+                        print(f"No valid prices found for {destination} / {cabin_class}.")
 
         browser.close()
 
@@ -490,10 +490,12 @@ def run_searches():
         print(f"Saved {len(all_results)} results to {CSV_FILE}.")
 
         send_daily_summary(all_results)
+
         if os.getenv("GITHUB_ACTIONS") != "true":
             auto_push_to_github()
         else:
-           print("Running in GitHub Actions. Skipping internal auto-push.")
+            print("Running in GitHub Actions. Skipping internal auto-push.")
+            
 def auto_push_to_github():
     try:
         subprocess.run(["git", "pull", "origin", "main", "--no-rebase"], check=True)
