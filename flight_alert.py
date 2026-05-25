@@ -220,7 +220,7 @@ def search_single_trip(page, origin, destination, trip, cabin_class):
     print(f"Cabin: {cabin_class}")
 
     page.goto(google_flights_url)
-    page.wait_for_timeout(7000)
+    page.wait_for_timeout(12000)
 
     all_text = page.locator("body").inner_text()
     flight_blocks = extract_flight_blocks(all_text)
