@@ -20,7 +20,7 @@ ORIGINS = ["MEX"]
 DESTINATIONS = ["DUB"]
 
 SCAN_FROM_DAYS = 180
-SCAN_TO_DAYS = 200
+SCAN_TO_DAYS = 190
 
 MIN_TRIP_DAYS = 10
 MAX_TRIP_DAYS = 12
@@ -220,7 +220,7 @@ def search_single_trip(page, origin, destination, trip, cabin_class):
     print(f"Cabin: {cabin_class}")
 
     page.goto(google_flights_url)
-    page.wait_for_timeout(25000)
+    page.wait_for_timeout(7000)
 
     all_text = page.locator("body").inner_text()
     flight_blocks = extract_flight_blocks(all_text)
