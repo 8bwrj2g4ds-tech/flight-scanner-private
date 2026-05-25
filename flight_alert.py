@@ -202,6 +202,7 @@ def get_deal_score(price, cabin_class):
 
     return "Deal found"
 
+
 def search_single_trip(page, origin, destination, trip, cabin_class):
     departure_date = trip["departure"]
     return_date = trip["return"]
@@ -363,6 +364,7 @@ def send_top_3_deals_alert(destination, cabin_class, top_3_deals, history):
         send_telegram_alert(message)
         print("Top 3 deal alert sent.")
 
+
 def get_buy_now_signal(result):
     price = result["lowest_price"]
     cabin = result["cabin"]
@@ -394,8 +396,8 @@ def send_daily_summary(results):
     best_buy_now = min(buy_now_results, key=lambda r: r["lowest_price"]) if buy_now_results else None
 
     message = (
-    "📊 DAILY FLIGHT DEAL SUMMARY\n"
-    f"⏰ Scan Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
+        "📊 DAILY FLIGHT DEAL SUMMARY\n"
+        f"⏰ Scan Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
     )
 
     if best_economy:
@@ -437,6 +439,7 @@ def send_daily_summary(results):
 
     send_telegram_alert(message)
     print("Daily summary sent.")
+
 
 def run_searches():
     trips = generate_trips()
@@ -495,7 +498,8 @@ def run_searches():
             auto_push_to_github()
         else:
             print("Running in GitHub Actions. Skipping internal auto-push.")
-            
+
+
 def auto_push_to_github():
     try:
         subprocess.run(["git", "pull", "origin", "main", "--no-rebase"], check=True)
