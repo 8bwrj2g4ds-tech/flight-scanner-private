@@ -19,11 +19,11 @@ from playwright.sync_api import sync_playwright
 ORIGINS = ["MEX", "GDL", "MTY"]
 DESTINATIONS = ["NRT", "CDG","MAD", "EDI", "AMS", "FCO", "DUB"]
 
-SCAN_START_DATE = "2026-09-01"
-SCAN_END_DATE = "2026-09-10"
+SCAN_FROM_DAYS = 180
+SCAN_TO_DAYS = 360
 
-MIN_TRIP_DAYS = 7
-MAX_TRIP_DAYS = 8
+MIN_TRIP_DAYS = 10
+MAX_TRIP_DAYS = 12
 
 PASSENGERS = 1
 
@@ -59,13 +59,17 @@ TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 
 def generate_trips():
     trips = []
-    start_date = datetime.strptime(SCAN_START_DATE, "%Y-%m-%d")
-    end_date = datetime.strptime(SCAN_END_DATE, "%Y-%m-%d")
+
+    today = datetime.today()
+
+    start_date = today + timedelta(days=SCAN_FROM_DAYS)
+    end_date = today + timedelta(days=SCAN_TO_DAYS)
 
     departure_date = start_date
 
     while departure_date <= end_date:
         for trip_length in range(MIN_TRIP_DAYS, MAX_TRIP_DAYS + 1):
+
             return_date = departure_date + timedelta(days=trip_length)
 
             if return_date <= end_date:
