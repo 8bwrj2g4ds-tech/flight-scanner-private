@@ -221,25 +221,31 @@ def search_single_trip(page, origin, destination, trip, cabin_class):
     print(f"Cabin: {cabin_class}")
 
     page.goto(google_flights_url)
+
+    # Wait for Google Flights to load
     page.wait_for_timeout(18000)
 
     all_text = page.locator("body").inner_text()
+
     flight_blocks = extract_flight_blocks(all_text)
 
     valid_blocks = [
-    block for block in flight_blocks
-    if block["stops"] in ALLOWED_STOPS
-]
+        block for block in flight_blocks
+        if block["stops"] in ALLOWED_STOPS
+    ]
 
-if valid_blocks:
-    best = min(valid_blocks, key=lambda item: item["price"])
-else:
-    if flight_blocks:
-        print("No flights matched stop filter. Using cheapest detected flight as fallback.")
-        best = min(flight_blocks, key=lambda item: item["price"])
+    # First try using stop-filtered results
+    if valid_blocks:
+        best = min(valid_blocks, key=lambda item: item["price"])
+
+    # Fallback if stop extraction fails
     else:
-        print("No prices found at all.")
-        return None
+        if flight_blocks:
+            print("No flights matched stop filter. Using cheapest detected flight as fallback.")
+            best = min(flight_blocks, key=lambda item: item["price"])
+        else:
+            print("No prices found at all.")
+            return None
 
     print(
         f"Best found: MX${best['price']:,} | "
