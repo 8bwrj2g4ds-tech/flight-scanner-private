@@ -22,8 +22,8 @@ DESTINATIONS = ["CDG"]
 SCAN_FROM_DAYS = 180
 SCAN_TO_DAYS = 190
 
-MIN_TRIP_DAYS = 10
-MAX_TRIP_DAYS = 12
+MIN_TRIP_DAYS = 7
+MAX_TRIP_DAYS = 8
 
 PASSENGERS = 1
 
@@ -38,8 +38,8 @@ CABIN_CLASSES = ["economy", "business"]
 ALLOWED_STOPS = ["Nonstop", "1 stop"]
 
 MAX_PRICE_BY_CABIN = {
-    "economy": 25000,
-    "business": 90000
+    "economy": 18000,
+    "business": 70000
 }
 
 MIN_VALID_PRICE_MXN = 8000
