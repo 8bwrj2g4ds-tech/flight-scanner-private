@@ -17,7 +17,7 @@ from playwright.sync_api import sync_playwright
 # =========================
 
 ORIGINS = ["MEX"]
-DESTINATIONS = ["CDG"]
+DESTINATIONS = ["DUB"]
 
 SCAN_FROM_DAYS = 180
 SCAN_TO_DAYS = 190
@@ -226,6 +226,8 @@ def search_single_trip(page, origin, destination, trip, cabin_class):
     page.wait_for_timeout(18000)
 
     all_text = page.locator("body").inner_text()
+    print("PAGE TEXT PREVIEW:")
+    print(all_text[:3000])
 
     flight_blocks = extract_flight_blocks(all_text)
 
