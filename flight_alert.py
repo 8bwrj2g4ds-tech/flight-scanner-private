@@ -35,7 +35,7 @@ CABIN_CLASSES = ["economy", "business"]
 # ["1 stop"]
 # ["Nonstop", "1 stop"]
 # ["Nonstop", "1 stop", "2 stops"]
-ALLOWED_STOPS = ["Nonstop", "1 stop"]
+ALLOWED_STOPS = ["Nonstop", "1 stop", "Unknown"]
 
 MAX_PRICE_BY_CABIN = {
     "economy": 18000,
@@ -43,6 +43,8 @@ MAX_PRICE_BY_CABIN = {
 }
 
 MIN_VALID_PRICE_MXN = 8000
+
+FALLBACK_USD_TO_MXN = 20
 
 HEADLESS_MODE = True
 
@@ -117,14 +119,35 @@ def build_google_flights_url(origin, destination, departure_date, return_date, c
         f"{cabin_class}%20class%20{PASSENGERS}%20passenger"
     )
 
+def get_usd_to_mxn_rate():
+    try:
+        url = "https://open.er-api.com/v6/latest/USD"
+        response = requests.get(url, timeout=10)
+        data = response.json()
+
+        rate = data["rates"]["MXN"]
+        print(f"Live USD to MXN rate: {rate}")
+        return rate
+
+    except Exception as e:
+        print("Could not fetch live FX rate. Using fallback.", e)
+        return FALLBACK_USD_TO_MXN
 
 def extract_flight_blocks(all_text):
+    usd_to_mxn = get_usd_to_mxn_rate()
+
     lines = [line.strip() for line in all_text.splitlines() if line.strip()]
     blocks = []
 
     for i, line in enumerate(lines):
-        if re.match(r"MX\$[\d,]+", line):
-            price = int(line.replace("MX$", "").replace(",", ""))
+        price_match = re.match(r"(MX\$|\$)([\d,]+)", line)
+
+        if price_match:
+            currency = price_match.group(1)
+            price = int(price_match.group(2).replace(",", ""))
+
+            if currency == "$":
+                price = int(price * usd_to_mxn)
 
             if price < MIN_VALID_PRICE_MXN:
                 continue
@@ -147,24 +170,11 @@ def extract_flight_blocks(all_text):
 
             airline = "Unknown"
             possible_airlines = [
-                "Aeromexico",
-                "Air France",
-                "KLM",
-                "Lufthansa",
-                "British Airways",
-                "Iberia",
-                "United",
-                "American",
-                "Delta",
-                "ANA",
-                "JAL",
-                "Emirates",
-                "Qatar",
-                "Turkish Airlines",
-                "Air Canada",
-                "Air Europa",
-                "Volaris",
-                "Viva Aerobus"
+                "Aeromexico", "Air France", "KLM", "Lufthansa",
+                "British Airways", "Iberia", "United", "American",
+                "Delta", "ANA", "JAL", "Emirates", "Qatar",
+                "Turkish Airlines", "Air Canada", "Air Europa",
+                "Volaris", "Viva Aerobus"
             ]
 
             for name in possible_airlines:
