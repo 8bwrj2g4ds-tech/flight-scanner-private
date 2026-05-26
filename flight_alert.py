@@ -17,7 +17,7 @@ from playwright.sync_api import sync_playwright
 # =========================
 
 ORIGINS = ["MEX"]
-DESTINATIONS = ["NRT"]
+DESTINATIONS = ["NRT", "CDG", "MAD", "AMS", "EDI" "DUB"]
 
 SCAN_FROM_DAYS = 180
 SCAN_TO_DAYS = 190
