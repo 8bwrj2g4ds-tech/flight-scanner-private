@@ -2,7 +2,7 @@ name: Flight Scanner
 
 on:
   schedule:
-  - cron: "0 12 * * *"
+    - cron: "0 12 * * *"
   workflow_dispatch:
 
 permissions:
@@ -49,5 +49,25 @@ jobs:
             echo "No CSV changes to commit"
           else
             git commit -m "Auto update flight results"
+            git push
+          fi
+
+      - name: Push CSV to dashboard repo
+        run: |
+          git clone https://x-access-token:${{ secrets.DASHBOARD_PUSH_TOKEN }}@github.com/8bwrj2g4ds-tech/flight-dashboard.git dashboard-temp
+
+          cp flight_results.csv dashboard-temp/flight_results.csv
+
+          cd dashboard-temp
+
+          git config user.name "github-actions"
+          git config user.email "actions@github.com"
+
+          git add flight_results.csv
+
+          if git diff --cached --quiet; then
+            echo "No dashboard CSV changes"
+          else
+            git commit -m "Update dashboard CSV"
             git push
           fi
