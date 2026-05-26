@@ -35,7 +35,7 @@ CABIN_CLASSES = ["economy", "business"]
 # ["1 stop"]
 # ["Nonstop", "1 stop"]
 # ["Nonstop", "1 stop", "2 stops"]
-ALLOWED_STOPS = ["Nonstop", "1 stop", "Unknown"]
+ALLOWED_STOPS = ["Nonstop", "1 stop", "2 stops", "Unknown"]
 
 MAX_PRICE_BY_CABIN = {
     "economy": 18000,
