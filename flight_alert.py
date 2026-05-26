@@ -174,7 +174,7 @@ def extract_flight_blocks(all_text):
                 "British Airways", "Iberia", "United", "American",
                 "Delta", "ANA", "JAL", "Emirates", "Qatar",
                 "Turkish Airlines", "Air Canada", "Air Europa",
-                "Volaris", "Viva Aerobus"
+                "Volaris", "Viva Aerobus", "Avianca"
             ]
 
             for name in possible_airlines:
