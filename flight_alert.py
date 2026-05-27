@@ -140,7 +140,7 @@ def extract_flight_blocks(all_text):
     blocks = []
 
     for i, line in enumerate(lines):
-        price_match = re.match(r"(MX\$|\$)([\d,]+)", line)
+        price_match = re.search(r"(MX\$|\$)\s?([\d,]+)", line)
 
         if price_match:
             currency = price_match.group(1)
@@ -156,13 +156,13 @@ def extract_flight_blocks(all_text):
             block_text = "\n".join(nearby)
 
             stops = "Unknown"
-            if "Nonstop" in block_text:
+            if re.search(r"\b(nonstop|direct)\b", block_text, re.IGNORECASE):
                 stops = "Nonstop"
-            elif "1 stop" in block_text:
+            elif re.search(r"\b1\s+stop\b|\b1\s+layover\b|\b1\s+connection\b", block_text, re.IGNORECASE):
                 stops = "1 stop"
-            elif "2 stops" in block_text:
+            elif re.search(r"\b2\s+stops\b|\b2\s+layovers\b|\b2\s+connections\b", block_text, re.IGNORECASE):
                 stops = "2 stops"
-
+                
             duration = "Unknown"
             duration_match = re.search(r"(\d+ hr(?: \d+ min)?|\d+ min)", block_text)
             if duration_match:
@@ -212,7 +212,6 @@ def get_deal_score(price, cabin_class):
 
     return "Deal found"
 
-
 def search_single_trip(page, origin, destination, trip, cabin_class):
     departure_date = trip["departure"]
     return_date = trip["return"]
@@ -232,10 +231,17 @@ def search_single_trip(page, origin, destination, trip, cabin_class):
 
     page.goto(google_flights_url)
 
-    # Wait for Google Flights to load
-    page.wait_for_timeout(18000)
+    try:
+        page.wait_for_function(
+            """() => document.body.innerText.includes('Search results')
+            && /(\\$|MX\\$)\\s?[\\d,]+/.test(document.body.innerText)""",
+            timeout=30000
+        )
+    except Exception:
+        print("Timed out waiting for prices. Using available page text.")
 
     all_text = page.locator("body").inner_text()
+
     print("PAGE TEXT PREVIEW:")
     print(all_text[:3000])
 
@@ -246,11 +252,8 @@ def search_single_trip(page, origin, destination, trip, cabin_class):
         if block["stops"] in ALLOWED_STOPS
     ]
 
-    # First try using stop-filtered results
     if valid_blocks:
         best = min(valid_blocks, key=lambda item: item["price"])
-
-    # Fallback if stop extraction fails
     else:
         if flight_blocks:
             print("No flights matched stop filter. Using cheapest detected flight as fallback.")
@@ -279,7 +282,6 @@ def search_single_trip(page, origin, destination, trip, cabin_class):
         "duration": best["duration"],
         "url": google_flights_url
     }
-
 
 def save_results_to_csv(results):
     file_exists = os.path.exists(CSV_FILE)
