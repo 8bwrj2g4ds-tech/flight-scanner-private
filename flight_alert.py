@@ -17,13 +17,13 @@ from playwright.sync_api import sync_playwright
 # =========================
 
 ORIGINS = ["MEX"]
-DESTINATIONS = ["NRT", "CDG", "MAD", "AMS", "EDI", "DUB", "FRA"]
+DESTINATIONS = ["NRT", "CDG", "MAD", "AMS", "EDI", "DUB", "KEF"]
 
 SCAN_FROM_DAYS = 180
-SCAN_TO_DAYS = 190
+SCAN_TO_DAYS = 210
 
-MIN_TRIP_DAYS = 7
-MAX_TRIP_DAYS = 8
+MIN_TRIP_DAYS = 10
+MAX_TRIP_DAYS = 12
 
 PASSENGERS = 1
 
@@ -170,7 +170,7 @@ def extract_flight_blocks(all_text):
                 "British Airways", "Iberia", "United", "American",
                 "Delta", "ANA", "JAL", "Emirates", "Qatar",
                 "Turkish Airlines", "Air Canada", "Air Europa",
-                "Volaris", "Viva Aerobus", "Avianca", "WestJet"
+                "Volaris", "Viva Aerobus", "Avianca", "WestJet", "Aer Lingus"
             ]
 
             for name in possible_airlines:
