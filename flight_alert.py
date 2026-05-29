@@ -27,14 +27,8 @@ MAX_TRIP_DAYS = 8
 
 PASSENGERS = 1
 
-# Automatically compare both
 CABIN_CLASSES = ["economy", "business"]
 
-# Options:
-# ["Nonstop"]
-# ["1 stop"]
-# ["Nonstop", "1 stop"]
-# ["Nonstop", "1 stop", "2 stops"]
 ALLOWED_STOPS = ["Nonstop", "1 stop", "2 stops", "Unknown"]
 
 MAX_PRICE_BY_CABIN = {
@@ -43,9 +37,7 @@ MAX_PRICE_BY_CABIN = {
 }
 
 MIN_VALID_PRICE_MXN = 8000
-
 FALLBACK_USD_TO_MXN = 20
-
 HEADLESS_MODE = True
 
 PRICE_HISTORY_FILE = "best_price_history.json"
@@ -63,7 +55,6 @@ def generate_trips():
     trips = []
 
     today = datetime.today()
-
     start_date = today + timedelta(days=SCAN_FROM_DAYS)
     end_date = today + timedelta(days=SCAN_TO_DAYS)
 
@@ -71,7 +62,6 @@ def generate_trips():
 
     while departure_date <= end_date:
         for trip_length in range(MIN_TRIP_DAYS, MAX_TRIP_DAYS + 1):
-
             return_date = departure_date + timedelta(days=trip_length)
 
             if return_date <= end_date:
@@ -87,6 +77,10 @@ def generate_trips():
 
 
 def send_telegram_alert(message):
+    if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
+        print("Telegram credentials missing. Skipping alert.")
+        return
+
     url = f"https://api.telegram.org/bot{TELEGRAM_BOT_TOKEN}/sendMessage"
 
     response = requests.post(url, data={
@@ -119,6 +113,7 @@ def build_google_flights_url(origin, destination, departure_date, return_date, c
         f"{cabin_class}%20class%20{PASSENGERS}%20passenger"
     )
 
+
 def get_usd_to_mxn_rate():
     try:
         url = "https://open.er-api.com/v6/latest/USD"
@@ -132,6 +127,7 @@ def get_usd_to_mxn_rate():
     except Exception as e:
         print("Could not fetch live FX rate. Using fallback.", e)
         return FALLBACK_USD_TO_MXN
+
 
 def extract_flight_blocks(all_text):
     usd_to_mxn = get_usd_to_mxn_rate()
@@ -162,7 +158,7 @@ def extract_flight_blocks(all_text):
                 stops = "1 stop"
             elif re.search(r"\b2\s+stops\b|\b2\s+layovers\b|\b2\s+connections\b", block_text, re.IGNORECASE):
                 stops = "2 stops"
-                
+
             duration = "Unknown"
             duration_match = re.search(r"(\d+ hr(?: \d+ min)?|\d+ min)", block_text)
             if duration_match:
@@ -193,6 +189,123 @@ def extract_flight_blocks(all_text):
     return blocks
 
 
+def telegram_deal_score(deal):
+    price = deal["lowest_price"]
+    cabin = deal["cabin"].lower()
+    stops = deal["stops"].lower()
+    airline = deal["airline"]
+    duration = str(deal["duration"])
+
+    score = 100
+
+    if cabin == "business":
+        score += 20
+        if price <= 50000:
+            score += 30
+        elif price <= 60000:
+            score += 20
+        elif price <= 70000:
+            score += 10
+    else:
+        score += 5
+        if price <= 15000:
+            score += 25
+        elif price <= 18000:
+            score += 15
+        elif price <= 22000:
+            score += 5
+
+    if stops == "nonstop":
+        score += 25
+    elif "1 stop" in stops:
+        score += 10
+    elif "2 stops" in stops:
+        score -= 10
+    else:
+        score -= 5
+
+    premium_airlines = [
+        "Air France", "KLM", "Lufthansa", "British Airways",
+        "Iberia", "ANA", "JAL", "Emirates", "Qatar",
+        "Turkish Airlines", "Air Canada", "Delta"
+    ]
+
+    solid_airlines = [
+        "Aeromexico", "United", "American", "Air Europa", "Avianca"
+    ]
+
+    if airline in premium_airlines:
+        score += 10
+    elif airline in solid_airlines:
+        score += 5
+
+    if "hr" in duration:
+        try:
+            duration_hours = int(duration.split("hr")[0].strip())
+
+            if duration_hours <= 12:
+                score += 10
+            elif duration_hours <= 16:
+                score += 5
+            elif duration_hours >= 22:
+                score -= 10
+        except Exception:
+            pass
+
+    return round(score)
+
+
+def get_telegram_signal(score):
+    if score >= 145:
+        return "🔥 STRONG BUY"
+    if score >= 125:
+        return "✅ BUY"
+    return None
+
+
+def get_telegram_reasons(deal, score):
+    reasons = []
+
+    price = deal["lowest_price"]
+    cabin = deal["cabin"].lower()
+    stops = deal["stops"]
+    airline = deal["airline"]
+    duration = str(deal["duration"])
+
+    if cabin == "business" and price <= 50000:
+        reasons.append("excellent business fare")
+    elif cabin == "economy" and price <= 18000:
+        reasons.append("strong economy fare")
+
+    if stops == "Nonstop":
+        reasons.append("nonstop flight")
+    elif stops == "1 stop":
+        reasons.append("reasonable 1-stop itinerary")
+
+    if airline in [
+        "Air France", "KLM", "Lufthansa", "British Airways",
+        "Iberia", "ANA", "JAL", "Emirates", "Qatar",
+        "Turkish Airlines", "Air Canada", "Delta"
+    ]:
+        reasons.append("premium airline")
+
+    if "hr" in duration:
+        try:
+            duration_hours = int(duration.split("hr")[0].strip())
+            if duration_hours <= 16:
+                reasons.append("good travel duration")
+        except Exception:
+            pass
+
+    if score >= 145:
+        reasons.append("high AI deal score")
+
+    if not reasons:
+        reasons.append("good price and route combination")
+
+    return ", ".join(reasons)
+
+
 def get_deal_score(price, cabin_class):
     if cabin_class == "economy":
         if price <= 15000:
@@ -211,6 +324,7 @@ def get_deal_score(price, cabin_class):
             return "Average business price"
 
     return "Deal found"
+
 
 def search_single_trip(page, origin, destination, trip, cabin_class):
     departure_date = trip["departure"]
@@ -283,6 +397,7 @@ def search_single_trip(page, origin, destination, trip, cabin_class):
         "url": google_flights_url
     }
 
+
 def save_results_to_csv(results):
     file_exists = os.path.exists(CSV_FILE)
 
@@ -331,22 +446,18 @@ def send_top_3_deals_alert(destination, cabin_class, top_3_deals, history):
     history_key = f"{best_deal['origin']}-{destination}-{cabin_class}-best-flexible-date-price"
     previous_best = history.get(history_key)
 
-    should_alert = False
-    reason = ""
-
     max_price = MAX_PRICE_BY_CABIN[cabin_class]
 
-    if current_price <= max_price:
-        if previous_best is None:
-            should_alert = True
-            reason = "First best flexible-date deal found"
-        elif current_price < previous_best:
-            should_alert = True
-            reason = f"Best price dropped from MX${previous_best:,} to MX${current_price:,}"
-        else:
-            reason = "Best price is good, but not lower than previous best alert"
+    reason = ""
+    price_drop_detected = False
+
+    if previous_best is None:
+        reason = "First best flexible-date deal found"
+    elif current_price < previous_best:
+        price_drop_detected = True
+        reason = f"Best price dropped from MX${previous_best:,} to MX${current_price:,}"
     else:
-        reason = "Best price is above your limit"
+        reason = "Best price did not beat previous alert"
 
     history[history_key] = current_price
     save_price_history(history)
@@ -358,35 +469,54 @@ def send_top_3_deals_alert(destination, cabin_class, top_3_deals, history):
             f"MX${deal['lowest_price']:,} - {deal['airline']} - {deal['stops']}"
         )
 
-    print(reason)
+    best_deal_score = telegram_deal_score(best_deal)
+    signal = get_telegram_signal(best_deal_score)
 
-    if should_alert:
-        message = (
-            f"🔥 TOP 3 FLEXIBLE DATE DEALS 🔥\n\n"
-            f"Route: {best_deal['origin']} → {destination}\n"
-            f"Cabin: {cabin_class.title()}\n"
-            f"Allowed Stops: {', '.join(ALLOWED_STOPS)}\n\n"
+    should_alert = False
+
+    if current_price <= max_price and signal:
+        should_alert = True
+
+    if price_drop_detected and current_price <= max_price:
+        should_alert = True
+
+    if not should_alert:
+        print(
+            f"No Telegram alert sent. "
+            f"Score: {best_deal_score}. Signal: {signal}. Reason: {reason}"
         )
+        return
 
-        for index, deal in enumerate(top_3_deals, start=1):
-            message += (
-                f"{index}. {deal['departure']} to {deal['return']}\n"
-                f"   Trip Length: {deal['trip_length']} days\n"
-                f"   Price: MX${deal['lowest_price']:,}\n"
-                f"   Airline: {deal['airline']}\n"
-                f"   Stops: {deal['stops']}\n"
-                f"   Duration: {deal['duration']}\n\n"
-            )
+    message = (
+        f"{signal or '📉 PRICE DROP ALERT'}\n\n"
+        f"Route: {best_deal['origin']} → {destination}\n"
+        f"Cabin: {cabin_class.title()}\n"
+        f"AI Score: {best_deal_score}\n"
+        f"Reason: {reason}\n"
+        f"Why it matters: {get_telegram_reasons(best_deal, best_deal_score)}\n\n"
+        f"Top 3 flexible-date options:\n\n"
+    )
+
+    for index, deal in enumerate(top_3_deals, start=1):
+        deal_score = telegram_deal_score(deal)
 
         message += (
-            f"Deal Score: {get_deal_score(current_price, cabin_class)}\n"
-            f"Reason: {reason}\n\n"
-            f"Best Google Flights Link:\n"
-            f"{best_deal['url']}"
+            f"{index}. {deal['departure']} to {deal['return']}\n"
+            f"   Trip Length: {deal['trip_length']} days\n"
+            f"   Price: MX${deal['lowest_price']:,}\n"
+            f"   Airline: {deal['airline']}\n"
+            f"   Stops: {deal['stops']}\n"
+            f"   Duration: {deal['duration']}\n"
+            f"   AI Score: {deal_score}\n\n"
         )
 
-        send_telegram_alert(message)
-        print("Top 3 deal alert sent.")
+    message += (
+        f"Best Google Flights Link:\n"
+        f"{best_deal['url']}"
+    )
+
+    send_telegram_alert(message)
+    print("AI Telegram deal alert sent.")
 
 
 def get_buy_now_signal(result):
@@ -432,7 +562,8 @@ def send_daily_summary(results):
             f"Price: MX${best_economy['lowest_price']:,}\n"
             f"Airline: {best_economy['airline']}\n"
             f"Stops: {best_economy['stops']}\n"
-            f"Duration: {best_economy['duration']}\n\n"
+            f"Duration: {best_economy['duration']}\n"
+            f"AI Score: {telegram_deal_score(best_economy)}\n\n"
         )
 
     if best_business:
@@ -443,7 +574,8 @@ def send_daily_summary(results):
             f"Price: MX${best_business['lowest_price']:,}\n"
             f"Airline: {best_business['airline']}\n"
             f"Stops: {best_business['stops']}\n"
-            f"Duration: {best_business['duration']}\n\n"
+            f"Duration: {best_business['duration']}\n"
+            f"AI Score: {telegram_deal_score(best_business)}\n\n"
         )
 
     if best_buy_now:
@@ -456,6 +588,7 @@ def send_daily_summary(results):
             f"Airline: {best_buy_now['airline']}\n"
             f"Stops: {best_buy_now['stops']}\n"
             f"Duration: {best_buy_now['duration']}\n"
+            f"AI Score: {telegram_deal_score(best_buy_now)}\n"
             f"Link: {best_buy_now['url']}\n\n"
         )
 
