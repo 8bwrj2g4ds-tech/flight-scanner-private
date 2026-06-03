@@ -666,6 +666,37 @@ def get_buy_now_signal(result):
 
     return False
 
+def get_alert_priority_label(deal, all_results):
+    context = get_historical_context(deal)
+    score = telegram_deal_score(deal, context)
+
+    price = deal["lowest_price"]
+    cabin = deal["cabin"]
+    stops = deal["stops"]
+
+    if context and price <= context["lowest_ever"] * 1.03:
+        return "📉 New Historical Low"
+
+    if deal == min(all_results, key=lambda r: r["lowest_price"]):
+        return "🔥 Deal of the Day"
+
+    if cabin == "business":
+        business_results = [r for r in all_results if r["cabin"] == "business"]
+        if business_results and deal == min(business_results, key=lambda r: r["lowest_price"]):
+            return "💼 Best Business Deal"
+
+    if stops == "Nonstop":
+        nonstop_results = [r for r in all_results if r["stops"] == "Nonstop"]
+        if nonstop_results and deal == min(nonstop_results, key=lambda r: r["lowest_price"]):
+            return "🛫 Best Nonstop Deal"
+
+    if score >= 150:
+        return "🔥 Strong Buy"
+
+    if score >= 130:
+        return "✅ Good Buy"
+
+    return "👀 Watch"
 
 def send_daily_summary(results):
     if not results:
@@ -679,11 +710,34 @@ def send_daily_summary(results):
     best_economy = min(economy_results, key=lambda r: r["lowest_price"]) if economy_results else None
     best_business = min(business_results, key=lambda r: r["lowest_price"]) if business_results else None
     best_buy_now = min(buy_now_results, key=lambda r: r["lowest_price"]) if buy_now_results else None
+    deal_of_day = min(results, key=lambda r: r["lowest_price"]) if results else None
 
     message = (
         "📊 DAILY FLIGHT DEAL SUMMARY\n"
         f"⏰ Scan Time: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n"
     )
+
+    if deal_of_day:
+        context = get_historical_context(deal_of_day)
+        message += (
+            f"{get_alert_priority_label(deal_of_day, results)}\n"
+            f"{deal_of_day['origin']} → {deal_of_day['destination']}\n"
+            f"Cabin: {deal_of_day['cabin'].title()}\n"
+            f"Dates: {deal_of_day['departure']} to {deal_of_day['return']}\n"
+            f"Price: MX${deal_of_day['lowest_price']:,}\n"
+            f"Airline: {deal_of_day['airline']}\n"
+            f"Stops: {deal_of_day['stops']}\n"
+            f"Duration: {deal_of_day['duration']}\n"
+            f"AI Score: {telegram_deal_score(deal_of_day, context)}\n"
+        )
+
+        if context:
+            message += (
+                f"Vs Average: {context['delta_vs_average']:.1f}%\n"
+                f"Confidence: {context['confidence']}\n"
+            )
+
+        message += f"Link: {deal_of_day['url']}\n\n"
 
     if best_economy:
         context = get_historical_context(best_economy)
